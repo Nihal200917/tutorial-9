@@ -1,0 +1,71 @@
+---
+title: "Five Parameters"
+author: "Nihal Neeraj"
+format: html
+execute: 
+  echo: false
+---
+
+```{r}
+#| warning: false
+#| message: false
+library(tidyverse)
+library(primer.data)
+library(tidybayes)
+library(brms)
+library(gtsummary)
+library(scales)
+```
+
+```{r}
+#| warning: false
+#| message: false
+df1 <- governors |>
+  select(last_name, year, state, sex, lived_after, election_age)
+
+```
+
+```{r}
+#| warning: false
+#| label: model
+#| cache: true
+#| message: false
+fit_all <- brm(formula = lived_after ~ sex * election_age,
+               data = df1,
+               refresh = 0,
+               silent = 2,
+               seed = 9)
+```
+
+```{r}
+ndata <- tibble(election_age = c(50, 60))
+```
+
+```{r}
+#| label: plot
+#| message: false
+
+fit_all |>
+  add_epred_draws(newdata = newobs) |>
+  ggplot(aes(.epred, fill = sex)) +
+  geom_histogram(aes(y = after_stat(count/sum(count))), alpha = 0.5,
+                     bins = 100, 
+                     position = "identity") +
+  scale_x_continuous(labels = scales::number_format(accuracy = 1)) +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
+  labs(title = "Posterior for Expected Years Lived Post-Election",
+       subtitle = "Male candidates live longer",
+       x = "Years",
+       y = "Probability")
+```
+
+This data was drawn from the US Election which features demographic information about candidates for governor in the United States. This data will be used to determine the prediction of how long a political leader would live after election. One specific problem would be that there is a very wide difference between the average lifespan during the 20th century and the 21st century that we are in. The modeling approach being used is a linear regression model where the dependent variable is the number of years lived after election. Preliminary analysis suggests that being older at the time of election is associated with a shorter lifespan after election. One quantity of interest (QoI) in this analysis is the expected number of years lived post-election, with the model predicting an average lifespan of 10 years with a 95% credible interval of 8 to 12 years, indicating a moderate level of uncertainty in the predictions.
+
+$$
+\text{lived\_after}_i = \beta_0 + \beta_1 \cdot \text{sex}_i + \beta_2 \cdot \text{election\_age}_i + \beta_3 \cdot (\text{sex}_i \cdot \text{election\_age}_i) + \epsilon_i
+$$
+
+```{r}
+tbl_regression(fit_all)
+```
+
